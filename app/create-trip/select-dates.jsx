@@ -1,12 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
-import { useNavigation } from 'expo-router';
+import React, { useEffect, useState, useContext } from 'react';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation, useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { Calendar } from 'react-native-calendars';
+import { eachDayOfInterval, format } from 'date-fns';
+import { CreateTripContext } from '../../context/CreateTripContext'
+
+
+
 
 export default function SelectDates() {
   const navigation = useNavigation();
+  const router = useRouter();
   const [markedDates, setMarkedDates] = useState({});
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const {tripData, setTripData} = useContext(CreateTripContext)
+
 
   useEffect(() => {
     navigation.setOptions({
@@ -16,22 +26,53 @@ export default function SelectDates() {
     });
   }, []);
 
+  const OnDateSelectionContinue = () => { 
+    const totalNumberOfDays = Object.keys(markedDates).length;
+    if (totalNumberOfDays < 1) {
+      Alert.alert(
+        "No dates selected",
+        "Please select trip term",
+        [
+          { text: "Try Again", onPress: () => console.log("Button Pressed") }
+        ]
+      );
+    } else {
+      console.log("Number of days:", totalNumberOfDays)
+      setTripData({...tripData, startDate: startDate, endDate: endDate, totalNumberOfDays: totalNumberOfDays})
+      router.push('/create-trip/select-budget');  
+    }
+   }
+
   const onDayPress = (day) => {
     const dateString = day.dateString;
-    setMarkedDates((prevMarkedDates) => {
-      const newMarkedDates = { ...prevMarkedDates };
-      if (newMarkedDates[dateString]) {
-        delete newMarkedDates[dateString];
+    if (!startDate) {
+      setStartDate(dateString);
+      setMarkedDates({ [dateString]: { selected: true, selectedColor: '#2F7117' } });
+    } else if (!endDate) {
+      if (new Date(dateString) < new Date(startDate)) {
+        // If the selected date is earlier, reset endDate and update startDate
+        setStartDate(dateString);
+        setEndDate(null);
+        setMarkedDates({ [dateString]: { selected: true, selectedColor: '#2F7117' } });
       } else {
-        newMarkedDates[dateString] = {
-          selected: true,
-          selectedColor: '#2F7117',
-        };
+        setEndDate(dateString);
+        const range = eachDayOfInterval({
+          start: new Date(startDate),
+          end: new Date(dateString),
+        }).map((date) => format(date, 'yyyy-MM-dd'));
+        const newMarkedDates = {};
+        range.forEach((date) => {
+          newMarkedDates[date] = { selected: true, selectedColor: '#2F7117' };
+        });
+        setMarkedDates(newMarkedDates);
       }
-      return newMarkedDates;
-    });
+    } else {
+      setStartDate(dateString);
+      setEndDate(null);
+      setMarkedDates({ [dateString]: { selected: true, selectedColor: '#2F7117' } });
+    }
   };
-
+  
   return (
     <View
       style={{
@@ -52,9 +93,11 @@ export default function SelectDates() {
         Travel Dates
       </Text>
 
-      <View style={{ marginTop: 25 }}>
+      <View style={{ 
+        marginTop: 25,
+        paddingBottom: 25 
+      }}>
         <Calendar
-        onPress={    console.log(markedDates)     }
           onDayPress={onDayPress}
           markedDates={markedDates}
           style={{}}
@@ -79,6 +122,21 @@ export default function SelectDates() {
           }}
         />
       </View>
+      <TouchableOpacity 
+        onPress={OnDateSelectionContinue}
+      style={{
+        padding: 15, 
+        backgroundColor: Colors.PRIMARY,
+        borderRadius: 15,
+        marginTop: 20
+      }}>
+        <Text style={{
+          textAlign: 'center',
+          color: Colors.WHITE,
+          fontFamily: 'outfit-medium',
+          fontSize: 20,
+        }}>Continue</Text>
+      </TouchableOpacity>
     </View>
   );
 }

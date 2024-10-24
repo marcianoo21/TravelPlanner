@@ -14,8 +14,6 @@ export default function SelectTraveler() {
     const [selectedTraveler, setSelectedTraveler] = useState()
     const {tripData, setTripData} = useContext(CreateTripContext)
 
-    // console.log("CREATE TRIP CONTEXT", CreateTripContext)
-
 
     const router = useRouter()
     useEffect(() => {
